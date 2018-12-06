@@ -18,7 +18,7 @@
 ## Установка
 
 ```bash
-npm install --save-dev symfony-server-dump-live # Или yarn add --dev symfony-cli-make
+npm install --save-dev symfony-server-dump-live # Или yarn add --dev symfony-server-dump-live
 ```
 
 ## Использование
