@@ -1,5 +1,5 @@
 // , Request, Response
-import * as fs from 'fs'
+import * as fs from 'fs-extra'
 import { join } from 'path'
 import injectHtml from '~/injectHtml/InjectHtml'
 import AppServer from '~/AppServer'
@@ -11,14 +11,20 @@ const file = join(cwd, defaultFile)
 export default (appServer: AppServer) => {
   const express = appServer.getExpress()
 
-  express.get('/', (req, res) => {
-    fs.readFile(file, 'utf8', (err, html: string) => {
-      if (err) throw err
+  express.get('/', async (req, res) => {
+    const html = await fs.readFile(file, 'utf8')
 
-      res.send(
-        injectHtml(html, appServer.getPort())
-      )
-    })
+    res.send(
+      injectHtml(html, appServer.getPort())
+    )
+
+    // fs.readFile(file, 'utf8', (err, html: string) => {
+    //   if (err) throw err
+    //
+    //   res.send(
+    //     injectHtml(html, appServer.getPort())
+    //   )
+    // })
   })
 
   express.get('/admin', (req, res) => {

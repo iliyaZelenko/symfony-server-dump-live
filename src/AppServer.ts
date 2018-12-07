@@ -1,4 +1,4 @@
-// import * as fs from 'fs'
+import chalk from 'chalk'
 import * as express from 'express'
 import { Server, createServer } from 'http'
 import { Express } from 'express-serve-static-core'
@@ -49,7 +49,7 @@ export default class AppServer {
         opn(`http://${this.host}:` + this.port)
       }
 
-      console.log(`Server is running on port ${this.port}.`)
+      console.log(chalk.green(`Site is running on port ${chalk.bold(this.port.toString())}.`))
     })
   }
 

@@ -94,6 +94,8 @@ export default `
     height: 100vh;
     align-items: center;
     justify-content: center;
+    flex-direction: column;
+    text-align: center;
     width: 100vw;
     font-size: 4rem;
     position: absolute;
@@ -102,6 +104,10 @@ export default `
   }
   #iz-no-content.iz-no-content--hidden {
     display: none;
+  }
+  #iz-no-content #iz-no-content__small {
+    font-size: 1rem;
+    color: grey;
   }
 
   body {

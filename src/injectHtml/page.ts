@@ -46,6 +46,14 @@ export default ({ serverPort, content }) => `
     <div data-iz-symfony-dump-watcher>
       <div id="iz-no-content">
         Looks like dump is empty.
+        <br>
+        <small id="iz-no-content__small">
+          If the messages do not appear, then maybe you did not run the
+          <b>php ./bin/console server:dump --format=html > dump.html</b>
+          command.
+          <br>
+          This package just looks at the "dump.html" file that Symfony needs to change.
+        </small>
       </div>
       ${content.bodyContent}
     </div>

@@ -20,7 +20,7 @@ module.exports = {
   entry: './src/index.ts',
   output: {
     path: resolve(__dirname, './dist'),
-    filename: 'index.js'
+    filename: 'dump-server.js'
   },
   externals: [
     nodeExternals()

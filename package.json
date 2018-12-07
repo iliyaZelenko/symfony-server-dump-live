@@ -1,11 +1,11 @@
 {
   "name": "symfony-server-dump-live",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Ilya Zelenko",
-  "main": "./dist/index.js",
+  "main": "./dist/dump-server.js",
   "types": "./dist/index",
   "bin": {
-    "dump-server": "./dist/index.js"
+    "dump-server": "./dist/dump-server.js"
   },
   "files": [
     "dist",
