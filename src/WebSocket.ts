@@ -8,6 +8,9 @@ import injectHtml, { processUpdatedHtml } from '~/injectHtml/InjectHtml'
 export default class WebSocket {
   private io: SocketIO.Server
   private app: App
+  private initialContent?: string | false
+  private fileToWatch: any // string
+  private currentSocket?: SocketIO.Socket // string
 
   public constructor (app: App) {
     this.app = app
@@ -22,52 +25,39 @@ export default class WebSocket {
     // в мс
     const watchFileInterval = 500
     const { path: filePath } = this.app.getCLIParams()
-    const fileToWatch = join(process.cwd(), filePath)
+    this.fileToWatch = join(process.cwd(), filePath)
+    let watcher
 
     // console.log('!!!', fileToWatch)
     let initAdded = false
 
-    this.io.on('connect', async (socket: any) => {
+    this.io.on('connect', async (socket: SocketIO.Socket) => {
       // console.log('Client connected.')
+      this.currentSocket = socket
 
-      let initialContent = await this.getFileContent(fileToWatch)
+      this.initialContent = await this.getFileContent(this.fileToWatch)
 
       if (!initAdded) {
         // сразу после подключения менять весь контент
-        const html = await this.generateInitialHtml(initialContent)
-        socket.emit('apply full content', html)
+        const html = await this.generateInitialHtml(this.initialContent)
+        this.currentSocket.emit('apply full content', html)
 
         initAdded = true
       }
 
-      fs.watchFile(fileToWatch, { interval: watchFileInterval }, async (curr, prev) => {
-        // console.log('Content changed.')
+      // TODO watch советует использовать дока
+      watcher = this.watchFile.bind(this)
+      fs.watchFile(this.fileToWatch, { interval: watchFileInterval }, watcher)
 
-        const content = await this.getFileContent(fileToWatch)
+      this.currentSocket.on('feedback', console.log)
 
-        if (initialContent === '') {
-          const html = await this.generateInitialHtml(content)
+      this.currentSocket.on('disconnect', () => {
+        fs.unwatchFile(this.fileToWatch, watcher)
+        delete this.currentSocket
 
-          socket.emit('apply full content', html)
-
-          // ignore initialContent next time
-          initialContent = false
-        } else {
-          const html = processUpdatedHtml(content)
-
-          if (html) {
-            socket.emit('changed', html)
-          }
-        }
-        // console.log(`the current mtime is: ${curr.mtime}`)
-        // console.log(`the previous mtime was: ${prev.mtime}`)
-      })
-
-      socket.on('feedback', console.log)
-
-      socket.on('disconnect', () => {
         // console.log('Client disconnected.')
       })
+      // }
     })
   }
 
@@ -77,5 +67,32 @@ export default class WebSocket {
 
   private async generateInitialHtml (content) {
     return injectHtml(content, this.app.getAppServer().getPort())
+  }
+
+  private async watchFile (curr, prev) {
+    // console.log('Content changed.')
+    if (!this.currentSocket) {
+      // такого сценария не должно произойти
+      return
+    }
+
+    const content = await this.getFileContent(this.fileToWatch)
+
+    if (this.initialContent === '') {
+      const html = await this.generateInitialHtml(content)
+
+      this.currentSocket.emit('apply full content', html)
+
+      // ignore initialContent next time
+      this.initialContent = false
+    } else {
+      const html = processUpdatedHtml(content)
+
+      if (html) {
+        this.currentSocket.emit('changed', html)
+      }
+    }
+    // console.log(`the current mtime is: ${curr.mtime}`)
+    // console.log(`the previous mtime was: ${prev.mtime}`)
   }
 }

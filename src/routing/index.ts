@@ -17,14 +17,6 @@ export default (appServer: AppServer) => {
     res.send(
       injectHtml(html, appServer.getPort())
     )
-
-    // fs.readFile(file, 'utf8', (err, html: string) => {
-    //   if (err) throw err
-    //
-    //   res.send(
-    //     injectHtml(html, appServer.getPort())
-    //   )
-    // })
   })
 
   express.get('/admin', (req, res) => {

@@ -54,8 +54,11 @@ export default `
     height: 40px;
   }
 
-  .iz-width:hover, .iz-trash:hover, .iz-color:hover {
+  .iz-width:hover, .iz-trash:hover, .iz-color:hover{
     max-width: 50px;
+    cursor: pointer;
+  }
+  .iz-color:hover input {
     cursor: pointer;
   }
 

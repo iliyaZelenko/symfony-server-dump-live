@@ -34,14 +34,12 @@ export default class App {
 
       // создает файл если его нет чтобы не было ишибки на сокете и express серверах
       fs.ensureFileSync(fileToWatch)
+      // пишет в файл контент TODO описать лучше
+      fs.writeFileSync(fileToWatch, '<div style="text-align: center;">This file created manually.</div>')
     }
 
-    // try {
     this.appServer = new AppServer(this, port, host, open).start()
     new WebSocket(this).start()
-    // } catch ({ message }) {
-    //   console.log(message)
-    // }
   }
 
   public getAppServer () {
