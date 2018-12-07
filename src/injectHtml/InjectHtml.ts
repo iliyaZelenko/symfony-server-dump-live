@@ -163,7 +163,7 @@ export function processUpdatedHtml (html: string): HTML | null {
   if (last && lastArticle) {
     // если article совпадают (такая ситуация может возникнут ьесли вручную изменить html)
     if (last.attr('data-dedup-id') === lastArticle.attr('data-dedup-id')
-      || !last.attr('data-dedup-id') || !lastArticle.attr('data-dedup-id')
+      // || !last.attr('data-dedup-id') || !lastArticle.attr('data-dedup-id')
     ) {
       console.log('File change is ignored because no new message was added.')
 

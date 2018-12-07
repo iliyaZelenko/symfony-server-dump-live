@@ -23,7 +23,7 @@
 /******/
 /******/ 	var hotApplyOnUpdate = true;
 /******/ 	// eslint-disable-next-line no-unused-vars
-/******/ 	var hotCurrentHash = "d63a3308ed6ce14f4891";
+/******/ 	var hotCurrentHash = "30757962472f3eb07a6b";
 /******/ 	var hotRequestTimeout = 10000;
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentChildModule;
@@ -1151,7 +1151,8 @@ function processUpdatedHtml(html) {
     if (last && lastArticle) {
         // если article совпадают (такая ситуация может возникнут ьесли вручную изменить html)
         if (last.attr('data-dedup-id') === lastArticle.attr('data-dedup-id')
-            || !last.attr('data-dedup-id') || !lastArticle.attr('data-dedup-id')) {
+        // || !last.attr('data-dedup-id') || !lastArticle.attr('data-dedup-id')
+        ) {
             console.log('File change is ignored because no new message was added.');
             // возвращает null который проигнорируется дальше
             return null;
@@ -1256,7 +1257,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = `
 <style>
   #iz-background {
-    position: absolute;
+    position: fixed;
     right: 0;
     left: 0;
     bottom: 0;
@@ -1461,7 +1462,8 @@ exports.default = (serverPort) => `
       },
       methods: {
         trash () {
-          containerForContent.innerHTML = ''
+          // containerForContent.innerHTML = ''
+          containerForContent.querySelectorAll('article').forEach(i => i.remove())
 
           checkArticlesCount()
         },
@@ -1641,7 +1643,7 @@ module.exports = require("fs");
 /* 20 */
 /***/ (function(module) {
 
-module.exports = {"name":"symfony-server-dump-live","version":"1.0.1","author":"Ilya Zelenko","main":"./dist/dump-server.js","types":"./dist/index","bin":{"dump-server":"./dist/dump-server.js"},"files":["dist","src"],"keywords":["symfony","dump","server","live","debug","watcher","var","VarDumper","node","socket","html","cli"],"repository":{"type":"git","url":"git+https://github.com/iliyaZelenko/symfony-server-dump-live.git"},"bugs":{"url":"https://github.com/iliyaZelenko/symfony-server-dump-live/issues"},"homepage":"https://github.com/iliyaZelenko/symfony-server-dump-live#readme","license":"MIT","scripts":{"dev":"nodemon","start":"node ./dist","build":"webpack --mode none --config webpack.config.js","lint":"tslint -p tsconfig.json"},"devDependencies":{"@babel/core":"^7.1.6","@babel/preset-env":"^7.1.6","@types/express":"^4.16.0","@types/node":"^10.12.10","@types/socket.io":"^2.1.0","babel-eslint":"^10.0.1","babel-loader":"^8.0.4","eslint":"^5.9.0","eslint-config-standard":"^12.0.0","eslint-config-typescript":"^1.1.0","eslint-plugin-import":"^2.14.0","eslint-plugin-node":"^8.0.0","eslint-plugin-promise":"^4.0.1","eslint-plugin-standard":"^4.0.0","eslint-plugin-typescript":"^0.14.0","nodemon":"^1.18.7","ts-loader":"^5.3.1","ts-node":"^7.0.1","tsconfig-paths":"^3.7.0","tslint":"^5.11.0","tslint-config-standard":"^8.0.1","typescript":"^3.1.6","typescript-eslint-parser":"^21.0.1","webpack":"^4.26.1","webpack-cli":"^3.1.2","webpack-node-externals":"^1.7.2"},"dependencies":{"@types/express-serve-static-core":"^4.16.0","chalk":"^2.4.1","cheerio":"^1.0.0-rc.2","commander":"^2.19.0","express":"^4.16.4","fs-extra":"^7.0.1","opn":"^5.4.0","socket.io":"^2.2.0"}};
+module.exports = {"name":"symfony-server-dump-live","version":"1.0.2","author":"Ilya Zelenko","main":"./dist/dump-server.js","types":"./dist/index","bin":{"dump-server":"./dist/dump-server.js"},"files":["dist","src"],"keywords":["symfony","dump","server","live","debug","watcher","var","VarDumper","node","socket","html","cli"],"repository":{"type":"git","url":"git+https://github.com/iliyaZelenko/symfony-server-dump-live.git"},"bugs":{"url":"https://github.com/iliyaZelenko/symfony-server-dump-live/issues"},"homepage":"https://github.com/iliyaZelenko/symfony-server-dump-live#readme","license":"MIT","scripts":{"dev":"nodemon","start":"node ./dist","build":"webpack --mode none --config webpack.config.js","lint":"tslint -p tsconfig.json"},"devDependencies":{"@babel/core":"^7.1.6","@babel/preset-env":"^7.1.6","@types/express":"^4.16.0","@types/node":"^10.12.10","@types/socket.io":"^2.1.0","babel-eslint":"^10.0.1","babel-loader":"^8.0.4","eslint":"^5.9.0","eslint-config-standard":"^12.0.0","eslint-config-typescript":"^1.1.0","eslint-plugin-import":"^2.14.0","eslint-plugin-node":"^8.0.0","eslint-plugin-promise":"^4.0.1","eslint-plugin-standard":"^4.0.0","eslint-plugin-typescript":"^0.14.0","nodemon":"^1.18.7","ts-loader":"^5.3.1","ts-node":"^7.0.1","tsconfig-paths":"^3.7.0","tslint":"^5.11.0","tslint-config-standard":"^8.0.1","typescript":"^3.1.6","typescript-eslint-parser":"^21.0.1","webpack":"^4.26.1","webpack-cli":"^3.1.2","webpack-node-externals":"^1.7.2"},"dependencies":{"@types/express-serve-static-core":"^4.16.0","chalk":"^2.4.1","cheerio":"^1.0.0-rc.2","commander":"^2.19.0","express":"^4.16.4","fs-extra":"^7.0.1","opn":"^5.4.0","socket.io":"^2.2.0"}};
 
 /***/ }),
 /* 21 */

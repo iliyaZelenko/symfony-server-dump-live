@@ -46,7 +46,8 @@ export default (serverPort) => `
       },
       methods: {
         trash () {
-          containerForContent.innerHTML = ''
+          // containerForContent.innerHTML = ''
+          containerForContent.querySelectorAll('article').forEach(i => i.remove())
 
           checkArticlesCount()
         },
