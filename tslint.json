@@ -13,8 +13,7 @@
   "rules": {
     // in node you can use console
     "no-console": false,
-
-    "interface-name" : [true, "never-prefix"],
+    "interface-name": [true, "never-prefix"],
     "prefer-const": true,
     "ordered-imports": [false],
     "object-literal-sort-keys": [false],

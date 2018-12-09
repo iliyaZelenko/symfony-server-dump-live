@@ -13,8 +13,10 @@ export default class AppServer {
   private readonly port: number
   private readonly host: string
   private readonly open: boolean
+  private readonly app: App
 
   public constructor (app: App, port: number, host: string, open: boolean) {
+    this.app = app
     this.port = port
     this.host = host
     this.open = open
@@ -54,6 +56,6 @@ export default class AppServer {
   }
 
   protected routing (): void {
-    routing(this)
+    routing(this.app, this)
   }
 }

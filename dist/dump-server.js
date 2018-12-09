@@ -23,7 +23,7 @@
 /******/
 /******/ 	var hotApplyOnUpdate = true;
 /******/ 	// eslint-disable-next-line no-unused-vars
-/******/ 	var hotCurrentHash = "30757962472f3eb07a6b";
+/******/ 	var hotCurrentHash = "2af9a5ab6e29e398ce55";
 /******/ 	var hotRequestTimeout = 10000;
 /******/ 	var hotCurrentModuleData = {};
 /******/ 	var hotCurrentChildModule;
@@ -778,16 +778,19 @@ const AppServer_1 = __webpack_require__(7);
 const WebSocket_1 = __webpack_require__(17);
 const packageJson = __webpack_require__(20);
 const { version: appVersion } = packageJson;
-const { defaultFilePath, defaultHost, defaultPort, defaultNoOpen } = DefaultConfig_1.default;
+const { defaultFileName, defaultFilePath, defaultHost, defaultPort, defaultNoOpen } = DefaultConfig_1.default;
 class App {
     constructor() {
+        // показано ли предупреждение о том что path параметр из CLI является директорией.
+        this.CLIPathIsDirectoryNoticeShowed = false;
         const { host, port, open, runDump } = this.CLIParams = this.makeCLI();
+        const fileToWatch = this.getFileToWatch();
+        // console.log(fileToWatch)
         if (runDump) {
             this.runServerDump();
         }
-        const fileToWatch = path_1.join(process.cwd(), this.CLIParams.path);
         if (!fs.pathExistsSync(fileToWatch)) {
-            const msg = chalk_1.default.red(`We did not find a file ${fileToWatch}.`) +
+            const msg = App.getWarningText(`We did not find a file ${fileToWatch}.`) +
                 '\nIt is required that "server:dump" worked with this file by itself. ' +
                 'We created the file manually, but you have to start "server:dump" with this file, for example: ' +
                 chalk_1.default.blue('php ./bin/console server:dump --format=html > dump.html');
@@ -800,11 +803,34 @@ class App {
         this.appServer = new AppServer_1.default(this, port, host, open).start();
         new WebSocket_1.default(this).start();
     }
+    // по правилас TSLint статические методы должны быть в саммо начале, даже раньше аттрибутов
+    static getWarningText(msg) {
+        const warning = chalk_1.default.keyword('orange');
+        return warning(msg);
+    }
+    static getErrorText(msg) {
+        const error = chalk_1.default.bold.red;
+        return error(msg);
+    }
     getAppServer() {
         return this.appServer;
     }
     getCLIParams() {
         return this.CLIParams;
+    }
+    getFileToWatch() {
+        const path = path_1.join(process.cwd(), this.CLIParams.path);
+        let newPath;
+        if (fs.pathExistsSync(path) && fs.lstatSync(path).isDirectory()) {
+            newPath = path_1.join(path, defaultFileName);
+            if (!this.CLIPathIsDirectoryNoticeShowed) {
+                console.log(App.getWarningText(`Your path "${path}" does not contain a file, we changed it to "${newPath}", ` +
+                    'if you have a different file name, add it.'));
+                this.CLIPathIsDirectoryNoticeShowed = true;
+            }
+            return newPath || path;
+        }
+        return path;
     }
     makeCLI() {
         // TODO перемеиновать dist/index.js в dump-server, чтобы usage в help норм отображался
@@ -907,8 +933,10 @@ module.exports = require("path");
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+const defaultFileName = 'dump.html';
 const DefaultConfig = {
-    defaultFilePath: 'dump.html',
+    defaultFileName,
+    defaultFilePath: defaultFileName,
     defaultHost: 'localhost',
     defaultPort: 9000,
     defaultNoOpen: false
@@ -931,6 +959,7 @@ const routing_1 = __webpack_require__(11);
 class AppServer {
     constructor(app, port, host, open) {
         this.DEFAULT_PORT = 9000;
+        this.app = app;
         this.port = port;
         this.host = host;
         this.open = open;
@@ -961,7 +990,7 @@ class AppServer {
         });
     }
     routing() {
-        routing_1.default(this);
+        routing_1.default(this.app, this);
     }
 }
 exports.default = AppServer;
@@ -994,15 +1023,12 @@ module.exports = require("opn");
 Object.defineProperty(exports, "__esModule", { value: true });
 // , Request, Response
 const fs = __webpack_require__(4);
-const path_1 = __webpack_require__(5);
 const InjectHtml_1 = __webpack_require__(12);
-const defaultFile = 'dump.html';
-const cwd = process.cwd();
-const file = path_1.join(cwd, defaultFile);
-exports.default = (appServer) => {
+exports.default = (app, appServer) => {
     const express = appServer.getExpress();
+    const fileToWatch = app.getFileToWatch();
     express.get('/', async (req, res) => {
-        const html = await fs.readFile(file, 'utf8');
+        const html = await fs.readFile(fileToWatch, 'utf8');
         res.send(InjectHtml_1.default(html, appServer.getPort()));
     });
     express.get('/admin', (req, res) => {
@@ -1098,7 +1124,32 @@ function addButtons(html) {
     return $;
 }
 // предыдущий article
-let lastArticle = null;
+// let lastArticle: any = null
+const ignoreArticle = [];
+/**
+ * Добавляет в игнор сообщения (article) которые не были добавлены.
+ * @param {cheerioObj} $
+ * @return {void}
+ */
+function addToIgnore($) {
+    const articles = $('article');
+    articles.each((i, el) => {
+        const attr = $(el).attr('data-dedup-id');
+        if (!ignoreArticle.includes(attr)) {
+            ignoreArticle.push(attr);
+        }
+    });
+}
+/**
+ * Возвращает не проигнорированные сообщения.
+ * @param {cheerioObj} $
+ * @return {any}
+ */
+function getNotIgnoredMessages($) {
+    return $('article').filter((i, el) => {
+        return !ignoreArticle.includes($(el).attr('data-dedup-id'));
+    });
+}
 /**
  * Скрипт который в первую очередь и всегда выполняется для файла
  * @param {HTML} html
@@ -1123,15 +1174,17 @@ function getGroupedContent(html) {
     const content = {};
     // печально что нет DOMParser как в браузере (хоть где-то мне пригодился этот jquery xD)
     const $ = every(html);
-    const articles = $('article');
-    if (articles.length) {
-        // хоть и last, но в браузере она первая (изменено через стили)
-        const last = articles.last();
-        if (last) {
-            // ставит последнюю статью
-            lastArticle = last;
-        }
-    }
+    // const articles = $('article')
+    addToIgnore($);
+    // if (articles.length) {
+    //   // хоть и last, но в браузере она первая (изменено через стили)
+    //   const last = articles.last()
+    //
+    //   if (last) {
+    //     // ставит последнюю статью
+    //     lastArticle = last
+    //   }
+    // }
     const body = $('body').first();
     const head = $('head').first();
     if (head) {
@@ -1147,29 +1200,45 @@ function getGroupedContent(html) {
  */
 function processUpdatedHtml(html) {
     const $ = every(html);
-    const last = $('article').last();
-    if (last && lastArticle) {
+    const messages = getNotIgnoredMessages($);
+    addToIgnore($);
+    if (!messages.length) {
         // если article совпадают (такая ситуация может возникнут ьесли вручную изменить html)
-        if (last.attr('data-dedup-id') === lastArticle.attr('data-dedup-id')
+        // if (last.attr('data-dedup-id') === lastArticle.attr('data-dedup-id')
+        // TODO нужна ли эта проверка или нет, без нее изменение файла не игнорируется
+        // (по моеу после закрытия dump сервера), но в данном случае это не игнорирование вроде не на что не влияет
         // || !last.attr('data-dedup-id') || !lastArticle.attr('data-dedup-id')
-        ) {
-            console.log('File change is ignored because no new message was added.');
-            // возвращает null который проигнорируется дальше
-            return null;
-        }
+        // ) {
+        // TODO Важно! Проверять если число статей === 0, то возвращать значение с этой функции,
+        // TODO которое уже поймет WebSocket и обновит страницу в браузере.
+        console.log('File change is ignored because no new message was added.');
+        // возвращает null который проигнорируется дальше
+        return null;
     }
-    lastArticle = last;
+    // lastArticle = last
     // обозначает что последняя запись была только создана чтобы применилаь анимация
-    last.attr('data-iz-new-created', true);
+    messages.attr('data-iz-new-created', true);
+    // TODO объеденить две конструкции что рядом
     // добавляет скриптам
-    last.find('script').each((i, el) => {
+    messages.find('script').each((i, el) => {
         if ($(el).attr('data-script-executed') !== 'true') {
             $(el).attr('data-script-executed', false);
         }
     });
-    return $.html(last);
+    // last
+    return $.html(messages);
 }
 exports.processUpdatedHtml = processUpdatedHtml;
+/**
+ * Возвращает количество сообщений на странице (article)
+ * @param {HTML} [html]
+ * @return {number}
+ */
+function getArticlesCount(html) {
+    const $ = cheerio.load(html);
+    return $('article').length;
+}
+exports.getArticlesCount = getArticlesCount;
 
 
 /***/ }),
@@ -1202,8 +1271,6 @@ exports.default = ({ serverPort, content }) => `
 
     ${css_1.default}
 
-    ${js_1.default(serverPort)}
-
     ${content.headContent}
   </head>
   <body>
@@ -1229,19 +1296,21 @@ exports.default = ({ serverPort, content }) => `
       </div>
     </div>
     <div data-iz-symfony-dump-watcher>
-      <div id="iz-no-content">
-        Looks like dump is empty.
-        <br>
-        <small id="iz-no-content__small">
-          If the messages do not appear, then maybe you did not run the
-          <b>php ./bin/console server:dump --format=html > dump.html</b>
-          command.
-          <br>
-          This package just looks at the "dump.html" file that Symfony needs to change.
-        </small>
-      </div>
       ${content.bodyContent}
     </div>
+      <div id="iz-no-content">
+      Looks like dump is empty.
+      <br>
+      <small id="iz-no-content__small">
+        If the messages do not appear, then maybe you did not run the
+        <b>php ./bin/console server:dump --format=html > dump.html</b>
+        command.
+        <br>
+        This package just looks at the "dump.html" file that Symfony needs to change.
+      </small>
+    </div>
+
+    ${js_1.default(serverPort)}
   </body>
   </html>
 `;
@@ -1418,6 +1487,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // скрипт добавляет в тег header класс hidden, но не совсем понятно при каких условиях
 // зато понятно что скрипт должен выполнятся каждый для всех элементов, то есть его надо вызывать и для ново-добавленных
 // понял я это по этой строчке: document.addEventListener('DOMContentLoaded', function() {
+// Update: скорее всего этот скрипт прячет хедер тем article которые вывелись за один запрос, чтобы они имели один хедер
 const symfonyScript = `
 +(function () {
   let prev = null;
@@ -1435,8 +1505,11 @@ exports.default = (serverPort) => `
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
 <!--Injected script that changes the contents-->
 <script>
+  window.containerForContent = document.querySelector('[data-iz-symfony-dump-watcher]') // body
+  // изначально было только в DOMContentLoaded, но оказывается страница может долго грузится если много сообщений.
+  checkArticlesCount()
+
   document.addEventListener('DOMContentLoaded', () => {
-    window.containerForContent = document.querySelector('[data-iz-symfony-dump-watcher]') // body
     const socket = io.connect('http://localhost:${serverPort}')
 
     checkArticlesCount()
@@ -1488,7 +1561,6 @@ exports.default = (serverPort) => `
       // calling document.write on a closed (loaded) document automatically calls document.open,
       // which will clear the document.
       // document.open()
-      // document.open()
       // document.write(html)
       // document.close()
       // document.documentElement.innerHTML = html
@@ -1519,9 +1591,15 @@ exports.default = (serverPort) => `
       ${symfonyScript}
 
       const afterCount = checkArticlesCount()
+      const diffCount = afterCount - beforeCount
+      
+      console.log(afterCount, beforeCount, diffCount)
 
-      if (afterCount === beforeCount + 1) {
-        socket.emit('feedback', 'Message added.')
+      if (diffCount > 0) {
+        const plural = diffCount > 1
+        const msg = \`Message\${plural ? 's' : ''} added\${plural ? \` (\${diffCount})\`: ''}.\`
+
+        socket.emit('feedback', msg)
       }
     })
 
@@ -1530,7 +1608,7 @@ exports.default = (serverPort) => `
   })
 
   function checkArticlesCount () {
-    const text = containerForContent.querySelector('#iz-no-content')
+    const text = document.querySelector('#iz-no-content')
     const count = containerForContent.querySelectorAll('article').length
 
     if (count) {
@@ -1555,7 +1633,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const socketIo = __webpack_require__(18);
 const fs = __webpack_require__(19);
 const fsExtra = __webpack_require__(4);
-const path_1 = __webpack_require__(5);
 const InjectHtml_1 = __webpack_require__(12);
 class WebSocket {
     constructor(app) {
@@ -1568,8 +1645,7 @@ class WebSocket {
     async listen() {
         // в мс
         const watchFileInterval = 500;
-        const { path: filePath } = this.app.getCLIParams();
-        this.fileToWatch = path_1.join(process.cwd(), filePath);
+        this.fileToWatch = this.app.getFileToWatch();
         let watcher;
         // console.log('!!!', fileToWatch)
         let initAdded = false;
@@ -1592,7 +1668,6 @@ class WebSocket {
                 delete this.currentSocket;
                 // console.log('Client disconnected.')
             });
-            // }
         });
     }
     async getFileContent(fileToWatch) {
@@ -1610,7 +1685,7 @@ class WebSocket {
         const content = await this.getFileContent(this.fileToWatch);
         if (this.initialContent === '') {
             const html = await this.generateInitialHtml(content);
-            this.currentSocket.emit('apply full content', html);
+            this.currentSocket.emit('apply full content', html, InjectHtml_1.getArticlesCount(html));
             // ignore initialContent next time
             this.initialContent = false;
         }
@@ -1643,7 +1718,7 @@ module.exports = require("fs");
 /* 20 */
 /***/ (function(module) {
 
-module.exports = {"name":"symfony-server-dump-live","version":"1.0.2","author":"Ilya Zelenko","main":"./dist/dump-server.js","types":"./dist/index","bin":{"dump-server":"./dist/dump-server.js"},"files":["dist","src"],"keywords":["symfony","dump","server","live","debug","watcher","var","VarDumper","node","socket","html","cli"],"repository":{"type":"git","url":"git+https://github.com/iliyaZelenko/symfony-server-dump-live.git"},"bugs":{"url":"https://github.com/iliyaZelenko/symfony-server-dump-live/issues"},"homepage":"https://github.com/iliyaZelenko/symfony-server-dump-live#readme","license":"MIT","scripts":{"dev":"nodemon","start":"node ./dist","build":"webpack --mode none --config webpack.config.js","lint":"tslint -p tsconfig.json"},"devDependencies":{"@babel/core":"^7.1.6","@babel/preset-env":"^7.1.6","@types/express":"^4.16.0","@types/node":"^10.12.10","@types/socket.io":"^2.1.0","babel-eslint":"^10.0.1","babel-loader":"^8.0.4","eslint":"^5.9.0","eslint-config-standard":"^12.0.0","eslint-config-typescript":"^1.1.0","eslint-plugin-import":"^2.14.0","eslint-plugin-node":"^8.0.0","eslint-plugin-promise":"^4.0.1","eslint-plugin-standard":"^4.0.0","eslint-plugin-typescript":"^0.14.0","nodemon":"^1.18.7","ts-loader":"^5.3.1","ts-node":"^7.0.1","tsconfig-paths":"^3.7.0","tslint":"^5.11.0","tslint-config-standard":"^8.0.1","typescript":"^3.1.6","typescript-eslint-parser":"^21.0.1","webpack":"^4.26.1","webpack-cli":"^3.1.2","webpack-node-externals":"^1.7.2"},"dependencies":{"@types/express-serve-static-core":"^4.16.0","chalk":"^2.4.1","cheerio":"^1.0.0-rc.2","commander":"^2.19.0","express":"^4.16.4","fs-extra":"^7.0.1","opn":"^5.4.0","socket.io":"^2.2.0"}};
+module.exports = {"name":"symfony-server-dump-live","version":"1.0.4","author":"Ilya Zelenko","main":"./dist/dump-server.js","types":"./dist/index","bin":{"dump-server":"./dist/dump-server.js"},"files":["dist","src"],"keywords":["symfony","dump","server","live","debug","watcher","var","VarDumper","node","socket","html","cli"],"repository":{"type":"git","url":"git+https://github.com/iliyaZelenko/symfony-server-dump-live.git"},"bugs":{"url":"https://github.com/iliyaZelenko/symfony-server-dump-live/issues"},"homepage":"https://github.com/iliyaZelenko/symfony-server-dump-live#readme","license":"MIT","scripts":{"dev":"nodemon","start":"node ./dist","build":"webpack --mode none --config webpack.config.js","lint":"tslint -p tsconfig.json"},"devDependencies":{"@babel/core":"^7.1.6","@babel/preset-env":"^7.1.6","@types/express":"^4.16.0","@types/node":"^10.12.10","@types/socket.io":"^2.1.0","babel-eslint":"^10.0.1","babel-loader":"^8.0.4","eslint":"^5.9.0","eslint-config-standard":"^12.0.0","eslint-config-typescript":"^1.1.0","eslint-plugin-import":"^2.14.0","eslint-plugin-node":"^8.0.0","eslint-plugin-promise":"^4.0.1","eslint-plugin-standard":"^4.0.0","eslint-plugin-typescript":"^0.14.0","nodemon":"^1.18.7","ts-loader":"^5.3.1","ts-node":"^7.0.1","tsconfig-paths":"^3.7.0","tslint":"^5.11.0","tslint-config-standard":"^8.0.1","typescript":"^3.1.6","typescript-eslint-parser":"^21.0.1","webpack":"^4.26.1","webpack-cli":"^3.1.2","webpack-node-externals":"^1.7.2"},"dependencies":{"@types/express-serve-static-core":"^4.16.0","chalk":"^2.4.1","cheerio":"^1.0.0-rc.2","commander":"^2.19.0","express":"^4.16.4","fs-extra":"^7.0.1","opn":"^5.4.0","socket.io":"^2.2.0"}};
 
 /***/ }),
 /* 21 */

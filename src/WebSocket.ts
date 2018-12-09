@@ -2,8 +2,7 @@ import * as socketIo from 'socket.io'
 import * as fs from 'fs'
 import * as fsExtra from 'fs-extra'
 import App from '~/App'
-import { join } from 'path'
-import injectHtml, { processUpdatedHtml } from '~/injectHtml/InjectHtml'
+import injectHtml, { processUpdatedHtml, getArticlesCount } from '~/injectHtml/InjectHtml'
 
 export default class WebSocket {
   private io: SocketIO.Server
@@ -24,8 +23,7 @@ export default class WebSocket {
   private async listen () {
     // в мс
     const watchFileInterval = 500
-    const { path: filePath } = this.app.getCLIParams()
-    this.fileToWatch = join(process.cwd(), filePath)
+    this.fileToWatch = this.app.getFileToWatch()
     let watcher
 
     // console.log('!!!', fileToWatch)
@@ -57,7 +55,6 @@ export default class WebSocket {
 
         // console.log('Client disconnected.')
       })
-      // }
     })
   }
 
@@ -81,7 +78,7 @@ export default class WebSocket {
     if (this.initialContent === '') {
       const html = await this.generateInitialHtml(content)
 
-      this.currentSocket.emit('apply full content', html)
+      this.currentSocket.emit('apply full content', html, getArticlesCount(html))
 
       // ignore initialContent next time
       this.initialContent = false

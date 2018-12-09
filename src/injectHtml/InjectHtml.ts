@@ -95,7 +95,36 @@ function addButtons (html: HTML): cheerioObj {
 }
 
 // предыдущий article
-let lastArticle: any = null
+// let lastArticle: any = null
+const ignoreArticle: any[] = []
+
+/**
+ * Добавляет в игнор сообщения (article) которые не были добавлены.
+ * @param {cheerioObj} $
+ * @return {void}
+ */
+function addToIgnore ($: cheerioObj): void {
+  const articles = $('article')
+
+  articles.each((i, el) => {
+    const attr = $(el).attr('data-dedup-id')
+
+    if (!ignoreArticle.includes(attr)) {
+      ignoreArticle.push(attr)
+    }
+  })
+}
+
+/**
+ * Возвращает не проигнорированные сообщения.
+ * @param {cheerioObj} $
+ * @return {any}
+ */
+function getNotIgnoredMessages ($: cheerioObj): any {
+  return $('article').filter((i, el) => {
+    return !ignoreArticle.includes($(el).attr('data-dedup-id'))
+  })
+}
 
 /**
  * Скрипт который в первую очередь и всегда выполняется для файла
@@ -127,17 +156,18 @@ function getGroupedContent (html: string): ContentGroupInterface {
 
   // печально что нет DOMParser как в браузере (хоть где-то мне пригодился этот jquery xD)
   const $ = every(html)
-  const articles = $('article')
+  // const articles = $('article')
 
-  if (articles.length) {
-    // хоть и last, но в браузере она первая (изменено через стили)
-    const last = articles.last()
-
-    if (last) {
-      // ставит последнюю статью
-      lastArticle = last
-    }
-  }
+  addToIgnore($)
+  // if (articles.length) {
+  //   // хоть и last, но в браузере она первая (изменено через стили)
+  //   const last = articles.last()
+  //
+  //   if (last) {
+  //     // ставит последнюю статью
+  //     lastArticle = last
+  //   }
+  // }
 
   const body = $('body').first()
   const head = $('head').first()
@@ -158,31 +188,47 @@ function getGroupedContent (html: string): ContentGroupInterface {
  */
 export function processUpdatedHtml (html: string): HTML | null {
   const $ = every(html)
-  const last = $('article').last()
+  const messages = getNotIgnoredMessages($)
+  addToIgnore($)
 
-  if (last && lastArticle) {
+  if (!messages.length) {
     // если article совпадают (такая ситуация может возникнут ьесли вручную изменить html)
-    if (last.attr('data-dedup-id') === lastArticle.attr('data-dedup-id')
+    // if (last.attr('data-dedup-id') === lastArticle.attr('data-dedup-id')
+      // TODO нужна ли эта проверка или нет, без нее изменение файла не игнорируется
+      // (по моеу после закрытия dump сервера), но в данном случае это не игнорирование вроде не на что не влияет
       // || !last.attr('data-dedup-id') || !lastArticle.attr('data-dedup-id')
-    ) {
-      console.log('File change is ignored because no new message was added.')
+    // ) {
+    // TODO Важно! Проверять если число статей === 0, то возвращать значение с этой функции,
+    // TODO которое уже поймет WebSocket и обновит страницу в браузере.
+    console.log('File change is ignored because no new message was added.')
 
-      // возвращает null который проигнорируется дальше
-      return null
-    }
+    // возвращает null который проигнорируется дальше
+    return null
   }
 
-  lastArticle = last
+  // lastArticle = last
 
   // обозначает что последняя запись была только создана чтобы применилаь анимация
-  last.attr('data-iz-new-created', true)
-
+  messages.attr('data-iz-new-created', true)
+  // TODO объеденить две конструкции что рядом
   // добавляет скриптам
-  last.find('script').each((i, el) => {
+  messages.find('script').each((i, el) => {
     if ($(el).attr('data-script-executed') !== 'true') {
       $(el).attr('data-script-executed', false)
     }
   })
 
-  return $.html(last)
+  // last
+  return $.html(messages)
+}
+
+/**
+ * Возвращает количество сообщений на странице (article)
+ * @param {HTML} [html]
+ * @return {number}
+ */
+export function getArticlesCount (html?: HTML): number {
+  const $ = cheerio.load(html)
+
+  return $('article').length
 }

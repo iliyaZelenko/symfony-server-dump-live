@@ -9,23 +9,38 @@ import CLIParamsInterface from '~/CLIParamsInterface'
 import * as packageJson from '~/../package.json'
 
 const { version: appVersion } = packageJson
-const { defaultFilePath, defaultHost, defaultPort, defaultNoOpen } = DefaultConfig
+const { defaultFileName, defaultFilePath, defaultHost, defaultPort, defaultNoOpen } = DefaultConfig
 
 export default class App {
+  // по правилас TSLint статические методы должны быть в саммо начале, даже раньше аттрибутов
+  public static getWarningText (msg: string) {
+    const warning = chalk.keyword('orange')
+
+    return warning(msg)
+  }
+  public static getErrorText (msg: string) {
+    const error = chalk.bold.red
+
+    return error(msg)
+  }
+
   private readonly CLIParams: CLIParamsInterface
   private readonly appServer: AppServer
+  // показано ли предупреждение о том что path параметр из CLI является директорией.
+  private CLIPathIsDirectoryNoticeShowed: boolean = false
 
   public constructor () {
     const { host, port, open, runDump } = this.CLIParams = this.makeCLI()
+    const fileToWatch = this.getFileToWatch()
+
+    // console.log(fileToWatch)
 
     if (runDump) {
       this.runServerDump()
     }
 
-    const fileToWatch = join(process.cwd(), this.CLIParams.path)
-
     if (!fs.pathExistsSync(fileToWatch)) {
-      const msg = chalk.red(`We did not find a file ${fileToWatch}.`) +
+      const msg = App.getWarningText(`We did not find a file ${fileToWatch}.`) +
         '\nIt is required that "server:dump" worked with this file by itself. ' +
         'We created the file manually, but you have to start "server:dump" with this file, for example: ' +
         chalk.blue('php ./bin/console server:dump --format=html > dump.html')
@@ -48,6 +63,28 @@ export default class App {
 
   public getCLIParams () {
     return this.CLIParams
+  }
+
+  public getFileToWatch () {
+    const path = join(process.cwd(), this.CLIParams.path)
+    let newPath
+
+    if (fs.pathExistsSync(path) && fs.lstatSync(path).isDirectory()) {
+      newPath = join(path, defaultFileName)
+
+      if (!this.CLIPathIsDirectoryNoticeShowed) {
+        console.log(
+          App.getWarningText(`Your path "${path}" does not contain a file, we changed it to "${newPath}", ` +
+            'if you have a different file name, add it.')
+        )
+
+        this.CLIPathIsDirectoryNoticeShowed = true
+      }
+
+      return newPath || path
+    }
+
+    return path
   }
 
   private makeCLI (): CLIParamsInterface {

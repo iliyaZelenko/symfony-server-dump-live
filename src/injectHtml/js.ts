@@ -1,6 +1,7 @@
 // скрипт добавляет в тег header класс hidden, но не совсем понятно при каких условиях
 // зато понятно что скрипт должен выполнятся каждый для всех элементов, то есть его надо вызывать и для ново-добавленных
 // понял я это по этой строчке: document.addEventListener('DOMContentLoaded', function() {
+// Update: скорее всего этот скрипт прячет хедер тем article которые вывелись за один запрос, чтобы они имели один хедер
 const symfonyScript = `
 +(function () {
   let prev = null;
@@ -19,8 +20,11 @@ export default (serverPort) => `
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"></script>
 <!--Injected script that changes the contents-->
 <script>
+  window.containerForContent = document.querySelector('[data-iz-symfony-dump-watcher]') // body
+  // изначально было только в DOMContentLoaded, но оказывается страница может долго грузится если много сообщений.
+  checkArticlesCount()
+
   document.addEventListener('DOMContentLoaded', () => {
-    window.containerForContent = document.querySelector('[data-iz-symfony-dump-watcher]') // body
     const socket = io.connect('http://localhost:${serverPort}')
 
     checkArticlesCount()
@@ -72,7 +76,6 @@ export default (serverPort) => `
       // calling document.write on a closed (loaded) document automatically calls document.open,
       // which will clear the document.
       // document.open()
-      // document.open()
       // document.write(html)
       // document.close()
       // document.documentElement.innerHTML = html
@@ -103,9 +106,15 @@ export default (serverPort) => `
       ${symfonyScript}
 
       const afterCount = checkArticlesCount()
+      const diffCount = afterCount - beforeCount
+      
+      console.log(afterCount, beforeCount, diffCount)
 
-      if (afterCount === beforeCount + 1) {
-        socket.emit('feedback', 'Message added.')
+      if (diffCount > 0) {
+        const plural = diffCount > 1
+        const msg = \`Message\${plural ? 's' : ''} added\${plural ? \` (\${diffCount})\`: ''}.\`
+
+        socket.emit('feedback', msg)
       }
     })
 
@@ -114,7 +123,7 @@ export default (serverPort) => `
   })
 
   function checkArticlesCount () {
-    const text = containerForContent.querySelector('#iz-no-content')
+    const text = document.querySelector('#iz-no-content')
     const count = containerForContent.querySelectorAll('article').length
 
     if (count) {

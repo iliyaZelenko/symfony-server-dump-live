@@ -1,3 +1,4 @@
 import AppServer from '~/AppServer';
-declare const _default: (appServer: AppServer) => void;
+import App from '~/App';
+declare const _default: (app: App, appServer: AppServer) => void;
 export default _default;

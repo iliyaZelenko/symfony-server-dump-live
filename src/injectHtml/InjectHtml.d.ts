@@ -7,3 +7,9 @@ export default _default;
  * @return {HTML | null}
  */
 export declare function processUpdatedHtml(html: string): HTML | null;
+/**
+ * Возвращает количество сообщений на странице (article)
+ * @param {HTML} [html]
+ * @return {number}
+ */
+export declare function getArticlesCount(html?: HTML): number;

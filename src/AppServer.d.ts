@@ -9,6 +9,7 @@ export default class AppServer {
     private readonly port;
     private readonly host;
     private readonly open;
+    private readonly app;
     constructor(app: App, port: number, host: string, open: boolean);
     start(): this;
     getServer(): Server;

@@ -1,6 +1,6 @@
 {
   "name": "symfony-server-dump-live",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "Ilya Zelenko",
   "main": "./dist/dump-server.js",
   "types": "./dist/index",
