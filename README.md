@@ -17,6 +17,8 @@
 
 ## Установка
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/iliyaZelenko/symfony-server-dump-live.svg)](https://greenkeeper.io/)
+
 ```bash
 npm install --save-dev symfony-server-dump-live # Или yarn add --dev symfony-server-dump-live
 ```
